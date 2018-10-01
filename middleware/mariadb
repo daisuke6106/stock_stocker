@@ -1,0 +1,62 @@
+# Cent OS 7
+sudo yum install -y mariadb mariadb-devel mariadb-server
+
+# 以下のコマンドで最小構成のサーバー設定ファイルをコピーする。
+cp -p /usr/share/mysql/my-small.cnf /etc/my.cnf.d/server.cnf
+
+# 起動、停止
+systemctl start  mariadb.service
+systemctl status mariadb.service
+systemctl stop   mariadb.service
+
+# 自動起動
+systemctl enable mariadb
+
+# 初期設定
+sudo /usr/bin/mysql_secure_installation
+
+＞Enter current password for root (enter for none):
+が出たときはそのままエンター
+
+# ログイン
+mysql -u root -p
+
+# データベース一覧表示
+show databases;
+
+# 接続できるユーザ
+select user,host from mysql.user;
+
+# ポートの確認
+デフォルトではMySQLがTCPポート3306番でListenしているので、ポートが開いているか確認。
+$ netstat -tlpn
+
+# 文字コードの確認
+show variables like 'character_set%';
+
+# mysqlデータベース作成
+create database test_db;
+
+# ユーザ作成
+grant all privileges on test_db.* to test_user@"%" identified by '123456' with grant option;
+
+# 作成したユーザにてMYSQLに再接続
+mysql -u test_user -h [host] [データベース名] -p
+例：mysql -u test_user -h 192.168.11.13 test_db -p
+
+# テーブル作成
+create table USERS(
+  name varchar(10),
+  age  int(3)
+);
+
+# データ投入
+insert into USERS values ("a",0);
+
+# ====================================================================================================
+# 以下のエラー発生時、firewalldで弾かれていたので一旦切る
+# ERROR 2003 (HY000): Can't connect to MySQL server on '192.168.1.10' (113 "No route to host")
+# ====================================================================================================
+systemctl is-enabled firewalld
+systemctl stop firewalld
+systemctl disable firewalld

@@ -1,0 +1,1 @@
+LOAD DATA INFILE '/media/daisuke6106/6fdc625a-0f9b-4cda-a50c-af5591ba0a5f/crawle_data/kabuoji3.com/3463/2015.csv' INTO TABLE T_STOCK_QUOTE FIELDS TERMINATED BY ',' IGNORE 2 LINES;
