@@ -27,6 +27,33 @@ class stock(object):
     #     return stock( quandl.get("XJPX/" + stock_cd) )
 
     @staticmethod
+    def new_instance(mysql_host, mysql_database, mysql_user, mysql_password, stock_code, start = "1980-01-01", stop = "9999-12-31"):
+        '''
+        Constructor
+             引数に指定された接続先のDBに存在する以下のテーブルより指定された銘柄の情報を指定の期間取得し、株価オブジェクトを生成する。
+             銘柄情報を保持する「T_STOCK」、
+             株価過去情報を保持する「T_STOCK_QUOTE」より
+        Parameters
+        ----------
+        mysql_host : str
+            MYSQL接続先ホスト、もしくはIPアドレス
+        mysql_database : str
+            MYSQL接続先データベース名
+        mysql_user : str
+            MYSQL接続先ユーザ名
+        mysql_password : str
+            MYSQL接続先パスワード
+        stock_code : str
+            株価コード
+        start : str, default 1980-01-01
+            取得期間(From) 
+        stop : str, default 9999-12-31
+            取得期間(To)
+        '''
+        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
+        return stock(connector, stock_code, start, stop)
+
+    @staticmethod
     def impoert_all_stock_csv_to_T_STOCK_QUOTE(basepath, mysql_host, mysql_database, mysql_user, mysql_password):
         base_dir       = os.listdir(basepath);
         stock_dir_list = [f for f in base_dir if os.path.isdir(os.path.join(basepath, f))]
@@ -56,14 +83,51 @@ class stock(object):
         connector.commit()
         connector.close()
          
-    def __init__(self, stock_code, mysql_host, mysql_database, mysql_user, mysql_password):
+    
+         
+    def __init__(self, connector, stock_code, start = "1980-01-01", stop = "9999-12-31"):
         '''
         Constructor
+             引数に指定された接続先のDBに存在する以下のテーブルより指定された銘柄の情報を指定の期間取得し、株価オブジェクトを生成する。
+             銘柄情報を保持する「T_STOCK」、
+             株価過去情報を保持する「T_STOCK_QUOTE」より取得しインスタンスを生成する。
+        Parameters
+        ----------
+        connector : mysql.connector
+            MYSQLへの接続確立済みコネクション
+        stock_code : str
+            株価コード
+        start : str, default 1980-01-01
+            取得期間(From) 
+        stop : str, default 9999-12-31
+            取得期間(To)
         '''
-        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
-        self.stock_info = psql.read_sql("SELECT * FROM T_STOCK WHERE CODE = %s", connector, params=[stock_code])
-        # self.stock_history = psql.read_sql("SELECT * FROM T_STOCK_QUOTE WHERE CODE = %s", connector, params=[stock_code])
-        self.stock_history = psql.read_sql("SELECT * FROM T_STOCK_QUOTE WHERE CODE = %s AND TRADDAY BETWEEN %s AND %s", connector, params=[stock_code, "2018-08-01", "2018-08-31" ])
+        self.stock_code = stock_code
+        self.connector = connector
+        self.stock_info = psql.read_sql("SELECT * FROM T_STOCK WHERE CODE = %s", self.connector, params=[stock_code])
+        self.stock_history = psql.read_sql("SELECT * FROM T_STOCK_QUOTE WHERE CODE = %s AND TRADDAY BETWEEN %s AND %s ORDER BY TRADDAY", self.connector, params=[stock_code, start, stop], index_col="TRADDAY")
+        # self.stock_rate_of_change = self.create_day_before_ratio(self.stock_history)
+
+    def save_day_before_ratio(self):
+        '''
+        現在、インスタンスが保持している期間の「調整後終値」をもとに前日比を算出し、「T_STOCK_COMPARIAON」へ格納する。
+        '''
+        cursor = self.connector.cursor()
+        insert_sql = "REPLACE INTO T_STOCK_COMPARIAON VALUES (%s, %s, %s)"
+        
+        day_before_ratio_list = self.create_day_before_ratio()
+        for trad_day, day_before_ratio in day_before_ratio_list.iterrows() : 
+            cursor.execute(insert_sql, [self.stock_code, trad_day, day_before_ratio.DAY_BEFORE_RATIO])
+        self.connector.commit()
+        
+    def create_day_before_ratio(self):
+        stock_rate_of_change = pd.DataFrame(columns=["DAY_BEFORE_RATIO"])
+        before_row_history = None
+        for trad_day, row_history in self.stock_history.iterrows() :
+            if before_row_history is not None:
+                stock_rate_of_change.loc[trad_day] = ( ( row_history.CLOSE_ADJUST_VALUE - before_row_history.CLOSE_ADJUST_VALUE ) / before_row_history.CLOSE_ADJUST_VALUE ) * 100
+            before_row_history = row_history
+        return stock_rate_of_change
 
     def plot_stock_history(self):
         fig = plt.figure(figsize=(18, 9))
@@ -83,49 +147,13 @@ class stock(object):
         ax.set_ylabel("Price")
         fig.show()
         # self.stock_history.plot()
+     
+    def plot_stock_rate_of_change(self):
+        self.stock_rate_of_change.plot()
         
     def save_to_db(self):
         pass
 
-
-# class stock_metadata(object):
-#     '''
-#     classdocs
-#     '''
-#     
-#     @staticmethod
-#     def get_code_by_mysql(mysql_host, mysql_database, mysql_user, mysql_password):
-#         connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
-#         cursor = connector.cursor()
-#         cursor.execute("SELECT CODE FROM T_QDL_XJPX_METADATA")
-#         for row in cursor:
-#             print(row[0])
-#     
-#     @staticmethod
-#     def import_to_mysql(mysql_host, mysql_database, mysql_user, mysql_password, load_filepath):
-#         
-#         # create table T_QDL_XJPX_METADATA(
-#         #   CODE VARCHAR(50),
-#         #   NAME varchar(500),
-#         #   DESCRIPTION varchar(1000),
-#         #   REFRESHED_AT varchar(20),
-#         #   FROM_DATE varchar(10),
-#         #   TO_DATE varchar(10)
-#         # );
-#         connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
-#         cursor = connector.cursor()
-#         
-#         insert_sql = "INSERT INTO T_QDL_XJPX_METADATA VALUES (%s, %s, %s, %s, %s, %s)"
-#         with open(load_filepath, "r") as file:
-#             reader = csv.reader(file)
-#             header1 = next(reader)
-#             header2 = next(reader)
-#             for row in reader:
-#                 cursor.execute(insert_sql, [row[0], row[1], row[2], row[3], row[4], row[5]])
-#         connector.commit()
-#         connector.close()
-    
-    
 if __name__ == "__main__":
     '''
     メインメソッド
@@ -133,7 +161,9 @@ if __name__ == "__main__":
     # DBへのロード処理
     # stock_metadata.import_to_mysql( "192.168.42.124", "test_db", "test_user", "123456","/home/daisuke6106/ダウンロード/XJPX_metadata.csv")
     # stock.impoert_all_stock_csv_to_T_STOCK_QUOTE( "/media/daisuke6106/6fdc625a-0f9b-4cda-a50c-af5591ba0a5f/crawle_data/kabuoji3.com", "192.168.1.10", "test_db", "test_user", "123456")
-    stock_data = stock("4847", "192.168.1.10", "test_db", "test_user", "123456")
-    stock_data.plot_stock_history()
+    stock_data = stock.new_instance("192.168.1.13", "test_db", "test_user", "123456", "4847")
+    # stock_data.plot_stock_history()
+    # stock_data.stock_rate_of_change()
+    stock_data.save_day_before_ratio()
     print(stock_data)
     

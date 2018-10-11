@@ -8,3 +8,15 @@ CREATE TABLE T_STOCK(
 	SCALE_CODE         CHAR(1),
 	PRIMARY KEY(APPLYDATE,CODE)
 )
+
+-- CREATE TABLE文を参照し、そのテーブルの文字コードを確認
+-- show create table T_STOCK;
+
+-- テーブル状態を確認
+-- SHOW TABLE STATUS FROM database;
+
+-- 環境の文字コードを確認
+-- SHOW VARIABLES LIKE "chara%";
+
+-- 対象テーブルとカラムの文字コードを変更する
+-- ALTER TABLE T_STOCK CONVERT TO CHARACTER SET utf8;
