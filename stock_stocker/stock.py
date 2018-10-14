@@ -105,27 +105,30 @@ class stock(object):
         self.stock_code = stock_code
         self.connector = connector
         self.stock_info = psql.read_sql("SELECT * FROM T_STOCK WHERE CODE = %s", self.connector, params=[stock_code])
-        self.stock_history = psql.read_sql("SELECT * FROM T_STOCK_QUOTE WHERE CODE = %s AND TRADDAY BETWEEN %s AND %s ORDER BY TRADDAY", self.connector, params=[stock_code, start, stop], index_col="TRADDAY")
-        # self.stock_rate_of_change = self.create_day_before_ratio(self.stock_history)
+        self.stock_history = psql.read_sql("SELECT * FROM V_STOCK_HISTORY WHERE CODE = %s AND TRADDAY BETWEEN %s AND %s ORDER BY TRADDAY", self.connector, params=[stock_code, start, stop], index_col="TRADDAY")
+        
 
     def save_day_before_ratio(self):
         '''
         現在、インスタンスが保持している期間の「調整後終値」をもとに前日比を算出し、「T_STOCK_COMPARIAON」へ格納する。
         '''
         cursor = self.connector.cursor()
-        insert_sql = "REPLACE INTO T_STOCK_COMPARIAON VALUES (%s, %s, %s)"
+        insert_sql = "REPLACE INTO T_STOCK_COMPARIAON VALUES (%s, %s, %s, %s)"
         
         day_before_ratio_list = self.create_day_before_ratio()
         for trad_day, day_before_ratio in day_before_ratio_list.iterrows() : 
-            cursor.execute(insert_sql, [self.stock_code, trad_day, day_before_ratio.DAY_BEFORE_RATIO])
+            cursor.execute(insert_sql, [self.stock_code, trad_day, day_before_ratio.DAY_BEFORE_RATIO, day_before_ratio.DAY_BEFORE_RATIO_HISTORY])
         self.connector.commit()
         
     def create_day_before_ratio(self):
-        stock_rate_of_change = pd.DataFrame(columns=["DAY_BEFORE_RATIO"])
+        stock_rate_of_change = pd.DataFrame(columns=["DAY_BEFORE_RATIO","DAY_BEFORE_RATIO_HISTORY"])
         before_row_history = None
+        day_before_ratio_history = 0
         for trad_day, row_history in self.stock_history.iterrows() :
             if before_row_history is not None:
-                stock_rate_of_change.loc[trad_day] = ( ( row_history.CLOSE_ADJUST_VALUE - before_row_history.CLOSE_ADJUST_VALUE ) / before_row_history.CLOSE_ADJUST_VALUE ) * 100
+                day_before_ratio = ( ( row_history.CLOSE_ADJUST_VALUE - before_row_history.CLOSE_ADJUST_VALUE ) / before_row_history.CLOSE_ADJUST_VALUE ) * 100
+                day_before_ratio_history = day_before_ratio_history + day_before_ratio
+                stock_rate_of_change.loc[trad_day] = [day_before_ratio, day_before_ratio_history]
             before_row_history = row_history
         return stock_rate_of_change
 
@@ -148,22 +151,23 @@ class stock(object):
         fig.show()
         # self.stock_history.plot()
      
-    def plot_stock_rate_of_change(self):
-        self.stock_rate_of_change.plot()
+    def plot_stock_compariaon(self):
+        self.stock_history[['CLOSE_ADJUST_VALUE', 'DAY_BEFORE_RATIO_HISTORY']].plot()
         
     def save_to_db(self):
         pass
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     '''
     メインメソッド
     '''
     # DBへのロード処理
     # stock_metadata.import_to_mysql( "192.168.42.124", "test_db", "test_user", "123456","/home/daisuke6106/ダウンロード/XJPX_metadata.csv")
     # stock.impoert_all_stock_csv_to_T_STOCK_QUOTE( "/media/daisuke6106/6fdc625a-0f9b-4cda-a50c-af5591ba0a5f/crawle_data/kabuoji3.com", "192.168.1.10", "test_db", "test_user", "123456")
-    stock_data = stock.new_instance("192.168.1.13", "test_db", "test_user", "123456", "4847")
+    # stock_data = stock.new_instance("192.168.1.13", "test_db", "test_user", "123456", "4847")
     # stock_data.plot_stock_history()
-    # stock_data.stock_rate_of_change()
-    stock_data.save_day_before_ratio()
-    print(stock_data)
+    # stock_data.plot_stock_compariaon()
+    # data = stock_data.create_day_before_ratio()
+    # stock_data.save_day_before_ratio()
+    # print(stock_data)
     

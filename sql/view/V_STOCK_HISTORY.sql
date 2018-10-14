@@ -1,15 +1,16 @@
 CREATE VIEW V_STOCK_HISTORY
 AS 
 SELECT 
-	QUOTE.CODE                 ,
-	QUOTE.TRADDAY              ,
-	QUOTE.OPEN_RATE            ,
-	QUOTE.HIGH_PRICE           ,
-	QUOTE.LOW_PRICE            ,
-	QUOTE.CLOSE_RATE           ,
-	QUOTE.TRADING_VOLUME       ,
-	QUOTE.CLOSE_ADJUST_VALUE   ,
-	COMPARIAON.DAY_BEFORE_RATIO
+	QUOTE.CODE                         ,
+	QUOTE.TRADDAY                      ,
+	QUOTE.OPEN_RATE                    ,
+	QUOTE.HIGH_PRICE                   ,
+	QUOTE.LOW_PRICE                    ,
+	QUOTE.CLOSE_RATE                   ,
+	QUOTE.TRADING_VOLUME               ,
+	QUOTE.CLOSE_ADJUST_VALUE           ,
+	COMPARIAON.DAY_BEFORE_RATIO        ,
+	COMPARIAON.DAY_BEFORE_RATIO_HISTORY
 FROM
     T_STOCK_QUOTE QUOTE
 LEFT JOIN
