@@ -2,23 +2,14 @@
 # ====================================================================================================
 # 環境設定部
 # ====================================================================================================
-source ../bin/activate
 source ./env.sh
 
-python << EOF
-import os
-import glob
-import csv
-import mysql.connector
-import matplotlib
-import pandas.io.sql as psql
-import pandas as pd
-import matplotlib.pyplot as plt
-import mpl_finance
+# ====================================================================================================
+# Python仮想環境のアクティベーション
+# ====================================================================================================
+source ../bin/activate
 
-import stock 
-
-connector = mysql.connector.connect(host = "${MYSQL_HOST}", database = "${MYSQL_DATABASE}", user="${MYSQL_USER}", password = "${MYSQL_PASSWORD}")
-stock_data = stock(connector, "4847")
-stock_data.stock_data.plot_stock_compariaon()
-EOF
+# ====================================================================================================
+# 実行部
+# ====================================================================================================
+python import.py --mysql_host "${MYSQL_HOST}" --mysql_database "${MYSQL_DATABASE}" --mysql_user "${MYSQL_USER}" --mysql_password "${MYSQL_PASSWORD}" --stock_no $*

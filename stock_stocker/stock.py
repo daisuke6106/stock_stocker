@@ -8,13 +8,36 @@ import os
 import glob
 import csv
 import mysql.connector
-import matplotlib
 
 import pandas.io.sql as psql
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import mpl_finance
+
+class stock_list(object):
+    '''
+    classdocs
+    '''
+    @staticmethod
+    def new_instance(mysql_host, mysql_database, mysql_user, mysql_password, stock_code_list, start = "1980-01-01", stop = "9999-12-31"):
+        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
+        stock_list(connector, stock_code_list, start, stop)
+
+    def __init__(self, connector, stock_code_list, start = "1980-01-01", stop = "9999-12-31"):
+        self.stock_list = []
+        for stock_code in stock_code_list :
+            self.stock_list.append(stock(connector, stock_code, start, stop))
+
+    def plot_history(self, plot_target):
+        tmp_df_list = []
+        for stock in self.stock_list :
+            tmp_df = stock.stock_history[plot_target]
+            tmp_df.rename(columns={plot_target : stock.stock_code})
+            tmp_df_list.append(tmp_df)
+        tmp_marged_df = pd.concat(tmp_df_list, axis=1)
+        tmp_marged_df.plot()
+        
 
 class stock(object):
     '''
@@ -154,15 +177,15 @@ class stock(object):
     def plot_stock_compariaon(self):
         self.stock_history[['CLOSE_ADJUST_VALUE', 'DAY_BEFORE_RATIO_HISTORY']].plot()
         
+     
     def save_to_db(self):
         pass
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     '''
     メインメソッド
     '''
     # DBへのロード処理
-    # stock_metadata.import_to_mysql( "192.168.42.124", "test_db", "test_user", "123456","/home/daisuke6106/ダウンロード/XJPX_metadata.csv")
     # stock.impoert_all_stock_csv_to_T_STOCK_QUOTE( "/media/daisuke6106/6fdc625a-0f9b-4cda-a50c-af5591ba0a5f/crawle_data/kabuoji3.com", "192.168.1.10", "test_db", "test_user", "123456")
     # stock_data = stock.new_instance("192.168.1.13", "test_db", "test_user", "123456", "4847")
     # stock_data.plot_stock_history()
@@ -170,4 +193,10 @@ class stock(object):
     # data = stock_data.create_day_before_ratio()
     # stock_data.save_day_before_ratio()
     # print(stock_data)
+    connector = mysql.connector.connect(host = "192.168.1.13", database = "test_db", user="test_user", password = "123456")
+    stock_list_instance = stock_list(connector, ["4847", "4848"])
+    stock_list_instance.plot_history("CLOSE_ADJUST_VALUE")
+    plt.show()
+    
+    
     
