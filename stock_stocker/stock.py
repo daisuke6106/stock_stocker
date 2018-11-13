@@ -15,16 +15,46 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import mpl_finance
 
-class stock_list(object):
+class industry_code_17(object):
     '''
     classdocs
     '''
     @staticmethod
-    def new_instance(mysql_host, mysql_database, mysql_user, mysql_password, stock_code_list, start = "1980-01-01", stop = "9999-12-31"):
+    def new_instance(mysql_host, mysql_database, mysql_user, mysql_password, code):
         connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
-        stock_list(connector, stock_code_list, start, stop)
+        return industry_code_17(connector, code)
+
+    def __init__(self, connector, code):
+        self.connector = connector
+        self.code = code
+        self.industry_code = psql.read_sql("SELECT * FROM V_INDUSTRY_CODE_17 WHERE CODE = %s", self.connector, params=[code])
+        stock_code_list = psql.read_sql("SELECT * FROM T_STOCK WHERE INDUSTRY_CODE_17 = %s", self.connector, params=[code])
+        
+        self.stock_list = []
+        for stock_code in self.stock_code_list :
+            self.stock_list.append(stock(self.connector, stock_code.CODE))
+
+
+class stock_list(object):
+    '''
+    classdocs
+    '''
+    
+    @staticmethod
+    def new_instance_by_industry_code_17(mysql_host, mysql_database, mysql_user, mysql_password, industry_code_17, start = "1980-01-01", stop = "9999-12-31"):
+        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
+        stock_code_list = []
+        for index, stock in psql.read_sql("SELECT * FROM T_STOCK WHERE INDUSTRY_CODE_17 = %s", connector, params=[industry_code_17]).iterrows() :
+            stock_code_list.append(stock["CODE"])
+        return stock_list(connector, stock_code_list, start, stop)
+    
+    @staticmethod
+    def new_instance_by_codelist(mysql_host, mysql_database, mysql_user, mysql_password, stock_code_list, start = "1980-01-01", stop = "9999-12-31"):
+        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
+        return stock_list(connector, stock_code_list, start, stop)
 
     def __init__(self, connector, stock_code_list, start = "1980-01-01", stop = "9999-12-31"):
+        self.connector = connector
         self.stock_list = []
         for stock_code in stock_code_list :
             self.stock_list.append(stock(connector, stock_code, start, stop))
@@ -37,7 +67,6 @@ class stock_list(object):
             tmp_df_list.append(tmp_df)
         tmp_marged_df = pd.concat(tmp_df_list, axis=1)
         tmp_marged_df.plot()
-        
 
 class stock(object):
     '''
@@ -125,8 +154,8 @@ class stock(object):
         stop : str, default 9999-12-31
             取得期間(To)
         '''
-        self.stock_code = stock_code
         self.connector = connector
+        self.stock_code = stock_code
         self.stock_info = psql.read_sql("SELECT * FROM T_STOCK WHERE CODE = %s", self.connector, params=[stock_code])
         self.stock_history = psql.read_sql("SELECT * FROM V_STOCK_HISTORY WHERE CODE = %s AND TRADDAY BETWEEN %s AND %s ORDER BY TRADDAY", self.connector, params=[stock_code, start, stop], index_col="TRADDAY")
         
@@ -185,17 +214,14 @@ if __name__ == "__main__":
     '''
     メインメソッド
     '''
-    # DBへのロード処理
-    # stock.impoert_all_stock_csv_to_T_STOCK_QUOTE( "/media/daisuke6106/6fdc625a-0f9b-4cda-a50c-af5591ba0a5f/crawle_data/kabuoji3.com", "192.168.1.10", "test_db", "test_user", "123456")
-    # stock_data = stock.new_instance("192.168.1.13", "test_db", "test_user", "123456", "4847")
-    # stock_data.plot_stock_history()
-    # stock_data.plot_stock_compariaon()
-    # data = stock_data.create_day_before_ratio()
-    # stock_data.save_day_before_ratio()
-    # print(stock_data)
-    connector = mysql.connector.connect(host = "192.168.1.13", database = "test_db", user="test_user", password = "123456")
-    stock_list_instance = stock_list(connector, ["4847", "4848"])
-    stock_list_instance.plot_history("CLOSE_ADJUST_VALUE")
+    stock_list_ = stock_list.new_instance_by_industry_code_17(
+        "192.168.1.13", 
+       "test_db",
+       "test_user",
+        "123456",
+        "1"
+    )
+    stock_list_.plot_history("CLOSE_ADJUST_VALUE")
     plt.show()
     
     

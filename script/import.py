@@ -10,7 +10,7 @@ def get_command_opritons():
     argparser.add_argument('-md', '--mysql_database', type=str, help='mysql database'      )
     argparser.add_argument('-mu', '--mysql_user'    , type=str, help='mysql user'          )
     argparser.add_argument('-mp', '--mysql_password', type=str, help='mysql password'      )
-    argparser.add_argument('-s' , '--stock_no'       , type=str, help='Target stock nomber')
+    argparser.add_argument('-s' , '--stock_no'      , type=str, help='Target stock nomber')
     return argparser.parse_args()
 
 if __name__ == '__main__':

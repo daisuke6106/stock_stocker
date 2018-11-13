@@ -12,10 +12,9 @@ source ../bin/activate
 # ====================================================================================================
 # 実行部
 # ====================================================================================================
-python import.py                     \
+python plot_history.py               \
 --mysql_host "${MYSQL_HOST}"         \
 --mysql_database "${MYSQL_DATABASE}" \
 --mysql_user "${MYSQL_USER}"         \
 --mysql_password "${MYSQL_PASSWORD}" \
---stock_no $*
-
+--stock_no_list $*
