@@ -15,25 +15,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import mpl_finance
 
-class industry_code_17(object):
+class industry_code_17_list(object):
     '''
     classdocs
     '''
-    @staticmethod
-    def new_instance(mysql_host, mysql_database, mysql_user, mysql_password, code):
-        connector = mysql.connector.connect(host = mysql_host, database = mysql_database, user=mysql_user, password = mysql_password)
-        return industry_code_17(connector, code)
-
-    def __init__(self, connector, code):
+    def __init__(self, connector):
         self.connector = connector
-        self.code = code
-        self.industry_code = psql.read_sql("SELECT * FROM V_INDUSTRY_CODE_17 WHERE CODE = %s", self.connector, params=[code])
-        stock_code_list = psql.read_sql("SELECT * FROM T_STOCK WHERE INDUSTRY_CODE_17 = %s", self.connector, params=[code])
-        
-        self.stock_list = []
-        for stock_code in self.stock_code_list :
-            self.stock_list.append(stock(self.connector, stock_code.CODE))
+        self.industry_code_17_list = psql.read_sql("SELECT * FROM V_INDUSTRY_CODE_17", self.connector)
+    
 
+class industry_code_33_list(object):
+    '''
+    classdocs
+    '''
+    def __init__(self, connector):
+        self.connector = connector
+        self.industry_code_33_list = psql.read_sql("SELECT * FROM V_INDUSTRY_CODE_33", self.connector)
 
 class stock_list(object):
     '''
@@ -214,15 +211,14 @@ if __name__ == "__main__":
     '''
     メインメソッド
     '''
-    stock_list_ = stock_list.new_instance_by_industry_code_17(
-        "192.168.1.13", 
-       "test_db",
-       "test_user",
-        "123456",
-        "1"
+    connector = mysql.connector.connect(
+        host     = "192.168.42.124",
+        database = "test_db", 
+        user     = "test_user",
+        password = "123456"
     )
-    stock_list_.plot_history("CLOSE_ADJUST_VALUE")
-    plt.show()
-    
+    ind17_list = industry_code_17_list(connector)
+    for index, industry_code_17 in ind17_list.industry_code_17_list.iterrows() :
+        print( industry_code_17.CODE + "," + industry_code_17.NAME )
     
     
